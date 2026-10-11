@@ -1115,6 +1115,7 @@ impl VirtioDevice for Net {
 #[macro_use]
 #[allow(clippy::cast_possible_truncation)]
 pub mod tests {
+    use std::fs::{File, OpenOptions};
     use std::mem;
     use std::net::Ipv4Addr;
     use std::os::fd::AsRawFd;
@@ -1937,14 +1938,21 @@ pub mod tests {
         assert_eq!(&buf[..1000], &frame[..1000]);
     }
 
+    /// Replaces the tap fd of the net device with `file`, so that tap reads or writes fail
+    /// depending on how `file` was opened. Unlike closing the tap fd, this keeps the fd number
+    /// in use, so tests running concurrently cannot reuse it.
+    fn replace_tap_fd(th: &TestHelper, file: File) {
+        // SAFETY: both fds are valid.
+        let ret = unsafe { libc::dup2(file.as_raw_fd(), th.net.lock().unwrap().tap.as_raw_fd()) };
+        assert_ne!(ret, -1);
+    }
+
     #[test]
     fn test_tx_tap_failure() {
         let mem = single_region_mem(2 * MAX_BUFFER_SIZE);
         let mut th = TestHelper::get_default(&mem);
         th.activate_net();
-        // force the next write to the tap to return an error by simply closing the fd
-        // SAFETY: its a valid fd
-        unsafe { libc::close(th.net.lock().unwrap().tap.as_raw_fd()) };
+        replace_tap_fd(&th, File::open("/dev/null").unwrap());
 
         let desc_list = [(0, 1000, 0)];
         th.add_desc_chain(NetQueue::Tx, 0, &desc_list);
@@ -1964,9 +1972,6 @@ pub mod tests {
                 .has_pending_interrupt(VirtioInterruptType::Queue(TX_INDEX as u16))
         );
         th.txq.check_used_elem(0, 0, 0);
-
-        // dropping th would double close the tap fd, so leak it
-        std::mem::forget(th);
     }
 
     #[test]
@@ -2177,9 +2182,10 @@ pub mod tests {
         let mem = single_region_mem(2 * MAX_BUFFER_SIZE);
         let mut th = TestHelper::get_default(&mem);
         th.activate_net();
-        // force the next write to the tap to return an error by simply closing the fd
-        // SAFETY: its a valid fd
-        unsafe { libc::close(th.net.lock().unwrap().tap.as_raw_fd()) };
+        replace_tap_fd(
+            &th,
+            OpenOptions::new().write(true).open("/dev/null").unwrap(),
+        );
 
         // The RX queue is empty and there is a deferred frame.
         th.net().rx_buffer.used_descriptors = 1;
@@ -2206,9 +2212,6 @@ pub mod tests {
             1,
             th.simulate_event(NetEvent::Tap)
         );
-
-        // dropping th would double close the tap fd, so leak it
-        std::mem::forget(th);
     }
 
     #[test]

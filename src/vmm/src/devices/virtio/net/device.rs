@@ -877,6 +877,7 @@ impl Net {
         } else {
             self.rx_buffer.single_chain_slice_mut()
         };
+        let _metric = self.metrics.tap_read_agg.record_latency_metrics();
         self.tap.read_iovec(slice)
     }
 

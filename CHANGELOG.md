@@ -20,6 +20,9 @@ and this project adheres to
 - [#6237](https://github.com/firecracker-microvm/firecracker/pull/6237): Added
   balloon and virtio-mem memory reclamation for shared memfd-backed guest
   memory, such as memory shared with vhost-user devices.
+- [#XXXX](https://github.com/firecracker-microvm/firecracker/pull/XXXX): Added
+  the `tap_read_agg` net device metric, which aggregates the duration of tap
+  read operations, matching the existing `tap_write_agg` metric.
 
 ### Changed
 

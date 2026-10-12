@@ -125,6 +125,7 @@ def validate_fc_metrics(metrics):
         "tx_rate_limiter_throttled",
         "tx_spoofed_mac_count",
         "tx_remaining_reqs_count",
+        {"tap_read_agg": latency_agg_metrics_fields},
         {"tap_write_agg": latency_agg_metrics_fields},
     ]
     firecracker_metrics = {

@@ -167,6 +167,8 @@ pub struct NetDeviceMetrics {
     pub rx_fails: SharedIncMetric,
     /// Number of successful read operations while receiving data.
     pub rx_count: SharedIncMetric,
+    /// Number of interrupts sent to the guest for the receiving queue.
+    pub rx_interrupt_count: SharedIncMetric,
     /// Number of times reading from TAP failed.
     pub tap_read_fails: SharedIncMetric,
     /// Number of times writing to TAP failed.
@@ -181,6 +183,8 @@ pub struct NetDeviceMetrics {
     pub tx_fails: SharedIncMetric,
     /// Number of successful write operations while transmitting data.
     pub tx_count: SharedIncMetric,
+    /// Number of interrupts sent to the guest for the transmitting queue.
+    pub tx_interrupt_count: SharedIncMetric,
     /// Number of transmitted packets.
     pub tx_packets_count: SharedIncMetric,
     /// Number of events associated with the transmitting queue.
@@ -230,6 +234,8 @@ impl NetDeviceMetrics {
             .add(other.rx_packets_count.fetch_diff());
         self.rx_fails.add(other.rx_fails.fetch_diff());
         self.rx_count.add(other.rx_count.fetch_diff());
+        self.rx_interrupt_count
+            .add(other.rx_interrupt_count.fetch_diff());
         self.tap_read_fails.add(other.tap_read_fails.fetch_diff());
         self.tap_write_fails.add(other.tap_write_fails.fetch_diff());
         self.tap_write_agg
@@ -240,6 +246,8 @@ impl NetDeviceMetrics {
             .add(other.tx_malformed_frames.fetch_diff());
         self.tx_fails.add(other.tx_fails.fetch_diff());
         self.tx_count.add(other.tx_count.fetch_diff());
+        self.tx_interrupt_count
+            .add(other.tx_interrupt_count.fetch_diff());
         self.tx_packets_count
             .add(other.tx_packets_count.fetch_diff());
         self.tx_queue_event_count

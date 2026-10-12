@@ -20,6 +20,9 @@ and this project adheres to
 - [#6237](https://github.com/firecracker-microvm/firecracker/pull/6237): Added
   balloon and virtio-mem memory reclamation for shared memfd-backed guest
   memory, such as memory shared with vhost-user devices.
+- [#XXXX](https://github.com/firecracker-microvm/firecracker/pull/XXXX): Added
+  the `rx_interrupt_count` and `tx_interrupt_count` net device metrics, which
+  count the interrupts sent to the guest for each queue.
 
 ### Changed
 

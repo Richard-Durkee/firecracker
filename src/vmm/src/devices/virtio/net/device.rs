@@ -420,9 +420,9 @@ impl Net {
     /// https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html#x1-320005
     /// 2.6.7.1 Driver Requirements: Used Buffer Notification Suppression
     fn try_signal_queue(&mut self, queue_type: NetQueue) -> Result<(), DeviceError> {
-        let qidx = match queue_type {
-            NetQueue::Rx => RX_INDEX,
-            NetQueue::Tx => TX_INDEX,
+        let (qidx, interrupt_count) = match queue_type {
+            NetQueue::Rx => (RX_INDEX, &self.metrics.rx_interrupt_count),
+            NetQueue::Tx => (TX_INDEX, &self.metrics.tx_interrupt_count),
         };
         self.queues[qidx].advance_used_ring_idx();
 
@@ -433,6 +433,7 @@ impl Net {
                     self.metrics.event_fails.inc();
                     DeviceError::FailedSignalingIrq(err)
                 })?;
+            interrupt_count.inc();
         }
 
         Ok(())
@@ -1462,6 +1463,37 @@ pub mod tests {
         rx_invalid_descriptor(th);
     }
 
+    #[test]
+    fn test_interrupt_count_metrics() {
+        let mem = single_region_mem(2 * MAX_BUFFER_SIZE);
+        let mut th = TestHelper::get_default(&mem);
+        th.activate_net();
+        let rx_interrupts = th.net().metrics.rx_interrupt_count.count();
+        let tx_interrupts = th.net().metrics.tx_interrupt_count.count();
+
+        // Each interrupt sent to the guest is counted for its own queue only.
+        th.net()
+            .try_signal_queue(crate::devices::virtio::net::NetQueue::Rx)
+            .unwrap();
+        assert_eq!(
+            th.net().metrics.rx_interrupt_count.count(),
+            rx_interrupts + 1
+        );
+        assert_eq!(th.net().metrics.tx_interrupt_count.count(), tx_interrupts);
+
+        th.net()
+            .try_signal_queue(crate::devices::virtio::net::NetQueue::Tx)
+            .unwrap();
+        assert_eq!(
+            th.net().metrics.rx_interrupt_count.count(),
+            rx_interrupts + 1
+        );
+        assert_eq!(
+            th.net().metrics.tx_interrupt_count.count(),
+            tx_interrupts + 1
+        );
+    }
+
     fn rx_retry(mut th: TestHelper) {
         th.activate_net();
 
@@ -1758,6 +1790,7 @@ pub mod tests {
         let desc_list = [(0, 100, 0), (1, 100, VIRTQ_DESC_F_WRITE), (2, 500, 0)];
         th.add_desc_chain(NetQueue::Tx, 0, &desc_list);
         th.write_tx_frame(&desc_list, 700);
+        let tx_interrupts = th.net().metrics.tx_interrupt_count.count();
         th.event_manager.run_with_timeout(100).unwrap();
 
         // Check that the used queue advanced.
@@ -1766,6 +1799,10 @@ pub mod tests {
             th.net()
                 .interrupt_trigger()
                 .has_pending_interrupt(VirtioInterruptType::Queue(TX_INDEX as u16))
+        );
+        assert_eq!(
+            th.net().metrics.tx_interrupt_count.count(),
+            tx_interrupts + 1
         );
         th.txq.check_used_elem(0, 0, 0);
         // Check that the frame was skipped.

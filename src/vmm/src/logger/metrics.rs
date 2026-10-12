@@ -809,6 +809,24 @@ impl LatencyAggregateMetrics {
         }
     }
 
+    /// Merges `other` into these metrics, for metrics that combine several devices.
+    ///
+    /// `sum_us` gets the part of `other.sum_us` not flushed yet, and `min_us`/`max_us` the
+    /// lower/higher of the two, if `other` has recorded any value.
+    pub fn aggregate(&self, other: &Self) {
+        self.sum_us.add(other.sum_us.fetch_diff());
+        if !other.has_samples.load(Ordering::Relaxed) {
+            return;
+        }
+        let first_sample = !self.has_samples.swap(true, Ordering::Relaxed);
+        if first_sample || self.min_us.fetch() > other.min_us.fetch() {
+            self.min_us.store(other.min_us.fetch());
+        }
+        if self.max_us.fetch() < other.max_us.fetch() {
+            self.max_us.store(other.max_us.fetch());
+        }
+    }
+
     /// returns a latency recorder which captures stores start_time
     /// and updates the actual metrics at the end of recorders lifetime.
     /// in short instead of below 2 lines :
@@ -1224,6 +1242,31 @@ mod tests {
         assert_eq!(metric.min_us.fetch(), 0);
         assert_eq!(metric.max_us.fetch(), 7);
         assert_eq!(metric.sum_us.count(), 11);
+    }
+
+    #[test]
+    fn test_latency_aggregate_metrics_aggregate() {
+        let dev1 = LatencyAggregateMetrics::new();
+        dev1.record(5);
+        let dev2 = LatencyAggregateMetrics::new();
+        dev2.record(0);
+        dev2.record(9);
+        let unused = LatencyAggregateMetrics::new();
+
+        let aggregated = LatencyAggregateMetrics::new();
+        aggregated.aggregate(&dev1);
+        aggregated.aggregate(&unused);
+        aggregated.aggregate(&dev2);
+        assert_eq!(aggregated.min_us.fetch(), 0);
+        assert_eq!(aggregated.max_us.fetch(), 9);
+        assert_eq!(aggregated.sum_us.count(), 14);
+
+        // A device without values does not change min_us, even as the first one.
+        let aggregated = LatencyAggregateMetrics::new();
+        aggregated.aggregate(&unused);
+        aggregated.aggregate(&dev1);
+        assert_eq!(aggregated.min_us.fetch(), 5);
+        assert_eq!(aggregated.max_us.fetch(), 5);
     }
 
     #[test]

@@ -232,9 +232,7 @@ impl NetDeviceMetrics {
         self.rx_count.add(other.rx_count.fetch_diff());
         self.tap_read_fails.add(other.tap_read_fails.fetch_diff());
         self.tap_write_fails.add(other.tap_write_fails.fetch_diff());
-        self.tap_write_agg
-            .sum_us
-            .add(other.tap_write_agg.sum_us.fetch_diff());
+        self.tap_write_agg.aggregate(&other.tap_write_agg);
         self.tx_bytes_count.add(other.tx_bytes_count.fetch_diff());
         self.tx_malformed_frames
             .add(other.tx_malformed_frames.fetch_diff());

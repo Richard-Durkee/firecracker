@@ -220,10 +220,8 @@ impl BlockDeviceMetrics {
         self.write_bytes.add(other.write_bytes.fetch_diff());
         self.read_count.add(other.read_count.fetch_diff());
         self.write_count.add(other.write_count.fetch_diff());
-        self.read_agg.sum_us.add(other.read_agg.sum_us.fetch_diff());
-        self.write_agg
-            .sum_us
-            .add(other.write_agg.sum_us.fetch_diff());
+        self.read_agg.aggregate(&other.read_agg);
+        self.write_agg.aggregate(&other.write_agg);
         self.rate_limiter_throttled_events
             .add(other.rate_limiter_throttled_events.fetch_diff());
         self.io_engine_throttled_events

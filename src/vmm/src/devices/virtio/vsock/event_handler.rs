@@ -200,6 +200,7 @@ where
         let evset = event.event_set();
 
         if self.is_activated() {
+            let _metric = METRICS.event_handler_agg.record_latency_metrics();
             let used_queues = match source {
                 Self::PROCESS_ACTIVATE => {
                     self.handle_activate_event(ops);

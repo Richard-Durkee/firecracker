@@ -98,6 +98,7 @@ def validate_fc_metrics(metrics):
         "remaining_reqs_count",
         {"read_agg": latency_agg_metrics_fields},
         {"write_agg": latency_agg_metrics_fields},
+        {"event_handler_agg": latency_agg_metrics_fields},
     ]
     net_metrics = [
         "activate_fails",
@@ -126,6 +127,7 @@ def validate_fc_metrics(metrics):
         "tx_spoofed_mac_count",
         "tx_remaining_reqs_count",
         {"tap_write_agg": latency_agg_metrics_fields},
+        {"event_handler_agg": latency_agg_metrics_fields},
     ]
     firecracker_metrics = {
         "utc_timestamp_ms": "",
@@ -299,6 +301,7 @@ def validate_fc_metrics(metrics):
             "tx_flush_fails",
             "tx_write_fails",
             "rx_read_fails",
+            {"event_handler_agg": latency_agg_metrics_fields},
         ],
         "entropy": [
             "activate_fails",

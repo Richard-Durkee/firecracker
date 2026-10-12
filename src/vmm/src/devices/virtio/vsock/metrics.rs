@@ -39,7 +39,7 @@
 use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 
-use crate::logger::SharedIncMetric;
+use crate::logger::{LatencyAggregateMetrics, SharedIncMetric};
 
 /// Stores aggregate metrics of all Vsock connections/actions
 pub(super) static METRICS: VsockDeviceMetrics = VsockDeviceMetrics::new();
@@ -68,6 +68,8 @@ pub(super) struct VsockDeviceMetrics {
     pub muxer_event_fails: SharedIncMetric,
     /// Number of times when handling connection events on a vsock device failed.
     pub conn_event_fails: SharedIncMetric,
+    /// Duration of all event handling for the vsock device.
+    pub event_handler_agg: LatencyAggregateMetrics,
     /// Number of events associated with the receiving queue.
     pub rx_queue_event_count: SharedIncMetric,
     /// Number of events associated with the transmitting queue.
@@ -108,6 +110,7 @@ impl VsockDeviceMetrics {
             ev_queue_event_fails: SharedIncMetric::new(),
             muxer_event_fails: SharedIncMetric::new(),
             conn_event_fails: SharedIncMetric::new(),
+            event_handler_agg: LatencyAggregateMetrics::new(),
             rx_queue_event_count: SharedIncMetric::new(),
             tx_queue_event_count: SharedIncMetric::new(),
             rx_bytes_count: SharedIncMetric::new(),
@@ -128,7 +131,7 @@ impl VsockDeviceMetrics {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::logger::IncMetric;
+    use crate::logger::{IncMetric, StoreMetric};
 
     #[test]
     fn test_vsock_dev_metrics() {
@@ -137,6 +140,9 @@ pub mod tests {
         // the 1st serialize flushes the metrics and resets values to 0 so that
         // we can compare the values with local metrics.
         serde_json::to_string(&METRICS).unwrap();
+        // Latency min/max are not reset on flush, so clear what other tests recorded.
+        METRICS.event_handler_agg.min_us.store(0);
+        METRICS.event_handler_agg.max_us.store(0);
         let vsock_metrics_global: String = serde_json::to_string(&METRICS).unwrap();
         assert_eq!(vsock_metrics_local, vsock_metrics_global);
         vsock_metrics.conns_added.inc();

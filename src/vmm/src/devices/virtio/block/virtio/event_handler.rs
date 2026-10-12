@@ -1,5 +1,7 @@
 // Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
+use std::sync::Arc;
+
 use event_manager::{EventOps, Events, MutEventSubscriber};
 use vmm_sys_util::epoll::EventSet;
 
@@ -83,6 +85,8 @@ impl MutEventSubscriber for VirtioBlock {
         }
 
         if self.is_activated() {
+            let metrics = Arc::clone(&self.metrics);
+            let _metric = metrics.event_handler_agg.record_latency_metrics();
             match source {
                 Self::PROCESS_ACTIVATE => self.process_activate_event(ops),
                 Self::PROCESS_QUEUE => self.process_queue_event(),

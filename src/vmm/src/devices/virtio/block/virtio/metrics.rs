@@ -151,6 +151,8 @@ pub struct BlockDeviceMetrics {
     pub no_avail_buffer: SharedIncMetric,
     /// Number of times when handling events on a block device failed.
     pub event_fails: SharedIncMetric,
+    /// Duration of all event handling for this block device.
+    pub event_handler_agg: LatencyAggregateMetrics,
     /// Number of failures in executing a request on a block device.
     pub execute_fails: SharedIncMetric,
     /// Number of invalid requests received for this block device.
@@ -190,6 +192,7 @@ impl BlockDeviceMetrics {
     /// Const default construction.
     pub fn new() -> Self {
         Self {
+            event_handler_agg: LatencyAggregateMetrics::new(),
             read_agg: LatencyAggregateMetrics::new(),
             write_agg: LatencyAggregateMetrics::new(),
             ..Default::default()
@@ -206,6 +209,9 @@ impl BlockDeviceMetrics {
         self.cfg_fails.add(other.cfg_fails.fetch_diff());
         self.no_avail_buffer.add(other.no_avail_buffer.fetch_diff());
         self.event_fails.add(other.event_fails.fetch_diff());
+        self.event_handler_agg
+            .sum_us
+            .add(other.event_handler_agg.sum_us.fetch_diff());
         self.execute_fails.add(other.execute_fails.fetch_diff());
         self.invalid_reqs_count
             .add(other.invalid_reqs_count.fetch_diff());

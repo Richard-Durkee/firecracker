@@ -20,6 +20,9 @@ and this project adheres to
 - [#6237](https://github.com/firecracker-microvm/firecracker/pull/6237): Added
   balloon and virtio-mem memory reclamation for shared memfd-backed guest
   memory, such as memory shared with vhost-user devices.
+- [#XXXX](https://github.com/firecracker-microvm/firecracker/pull/XXXX): Added
+  the `event_handler_agg` metric to the net, block and vsock devices, which
+  aggregates the time the VMM thread spends handling each device's events.
 
 ### Changed
 

@@ -151,6 +151,8 @@ pub struct NetDeviceMetrics {
     pub no_tx_avail_buffer: SharedIncMetric,
     /// Number of times when handling events on a network device failed.
     pub event_fails: SharedIncMetric,
+    /// Duration of all event handling for this net device.
+    pub event_handler_agg: LatencyAggregateMetrics,
     /// Number of events associated with the receiving queue.
     pub rx_queue_event_count: SharedIncMetric,
     /// Number of events associated with the rate limiter installed on the receiving path.
@@ -199,6 +201,7 @@ impl NetDeviceMetrics {
     /// Const default construction.
     pub fn new() -> Self {
         Self {
+            event_handler_agg: LatencyAggregateMetrics::new(),
             tap_write_agg: LatencyAggregateMetrics::new(),
             ..Default::default()
         }
@@ -217,6 +220,9 @@ impl NetDeviceMetrics {
         self.no_tx_avail_buffer
             .add(other.no_tx_avail_buffer.fetch_diff());
         self.event_fails.add(other.event_fails.fetch_diff());
+        self.event_handler_agg
+            .sum_us
+            .add(other.event_handler_agg.sum_us.fetch_diff());
         self.rx_queue_event_count
             .add(other.rx_queue_event_count.fetch_diff());
         self.rx_event_rate_limiter_count
